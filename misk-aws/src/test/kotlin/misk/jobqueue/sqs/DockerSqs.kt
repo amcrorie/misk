@@ -23,6 +23,7 @@ internal object DockerSqs : ExternalDependency {
 
   private val log = getLogger<DockerSqs>()
   private const val clientPort = 4100
+  private const val hostInternalTarget = "host.docker.internal"
 
   override fun beforeEach() {
     // noop
@@ -32,7 +33,7 @@ internal object DockerSqs : ExternalDependency {
   override fun afterEach() {
     val queues = client.listQueues()
     queues.queueUrls.forEach {
-      client.deleteQueue(it)
+      client.deleteQueue(ensureUrlWithProperTarget(it))
     }
   }
 
@@ -69,6 +70,13 @@ internal object DockerSqs : ExternalDependency {
       return "host.docker.internal" 
     else 
       return "127.0.0.1"
+  }
+
+  private fun ensureUrlWithProperTarget(url: String): String {
+    if (isRunningInDocker())
+      return url.replace("localhost", hostInternalTarget).replace("127.0.0.1", hostInternalTarget)
+    else
+      return url
   }
 
   val endpoint = AwsClientBuilder.EndpointConfiguration(
